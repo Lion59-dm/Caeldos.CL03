@@ -254,11 +254,10 @@ textarea { resize: vertical; }
 
 <!-- Firebase SDK -->
 <script type="module">
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
 import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
 
-// Your web app's Firebase configuration
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAdVoWqExoyFMsUJaafsYBGm0HUnSt9ZZ4",
   authDomain: "dnd-caeldos.firebaseapp.com",
@@ -266,19 +265,17 @@ const firebaseConfig = {
   projectId: "dnd-caeldos",
   storageBucket: "dnd-caeldos.firebasestorage.app",
   messagingSenderId: "940131839058",
-  appId: "1:940131839058:web:492be6edef19056bd3438b"
+  appId: "1:940131839058:web:8c8f4fc5319b9953d3438b"
 };
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// SITE_PATH for separate websites
-const SITE_PATH = 'site1'; // Change to 'site2' for second site
+// 🔹 SITE_PATH for separate sites
+const SITE_PATH = 'site1'; // change to 'site2' for second website
 
 // Helpers
-function saveField(id, value){ set(ref(db,SITE_PATH+'/fields/'+id), value); }
-async function loadField(id){ const snap = await get(child(ref(db), SITE_PATH+'/fields/'+id)); return snap.exists() ? snap.val() : ''; }
+function saveField(id, value){ set(ref(db, SITE_PATH + '/fields/' + id), value); }
+async function loadField(id){ const snap = await get(child(ref(db), SITE_PATH + '/fields/' + id)); return snap.exists() ? snap.val() : ''; }
 
 // Wallpaper
 const wallpaperSelect=document.getElementById('wallpaperSelect');
@@ -288,7 +285,6 @@ const nextButton=document.getElementById('nextWallpaper');
 let currentWallpaperIndex=0;
 
 window.addEventListener('load', async ()=>{
-  // wallpaper
   const savedWallpaper=await loadField('wallpaper');
   if(savedWallpaper && wallpapers.includes(savedWallpaper)){
     document.body.style.backgroundImage=`url(${savedWallpaper})`;
@@ -297,13 +293,11 @@ window.addEventListener('load', async ()=>{
   } else {
     document.body.style.backgroundImage=`url(${wallpapers[0]})`;
   }
-  // stats
   document.querySelectorAll('.left-panel input').forEach(async input=>{
     const val=await loadField(input.id);
     if(val) input.value=val;
     input.addEventListener('input',()=>saveField(input.id,input.value));
   });
-  // tabs
   ['actions','spells','inventory','background'].forEach(loadTabData);
 });
 
@@ -363,47 +357,50 @@ function createInventoryElement(item){
 // Load tab data
 async function loadTabData(tab){
   if(tab==='actions' || tab==='spells'){
-    const snap=await get(child(ref(db),SITE_PATH+'/'+tab));
+    const snap=await get(child(ref(db), SITE_PATH + '/' + tab));
     const container=document.getElementById(tab+'Container'); container.innerHTML='';
     const data=snap.exists()?snap.val():[];
     (data.length?data:[{}]).forEach(d=>container.appendChild(createActionElement(d,()=>saveTabData(tab))));
   }
   if(tab==='inventory'){
-    const snap=await get(child(ref(db),SITE_PATH+'/inventory'));
+    const snap=await get(child(ref(db), SITE_PATH + '/inventory'));
     const container=document.getElementById('inventoryContainer'); container.innerHTML='';
     const data=snap.exists()?snap.val():[];
     (data.length?data:[{}]).forEach(d=>container.appendChild(createInventoryElement(d)));
   }
   if(tab==='background'){
-    ['bgName','bgRace','bgClass','bgGender','bgSize','bgHeight','bgFaith','bgAge','bgWeight','bgLanguages','bgBackstory'].forEach(async id=>{
-      const val=await loadField(id); if(val) document.getElementById(id).value=val;
-      document.getElementById(id).addEventListener('input',()=>saveField(id,document.getElementById(id).value));
-    });
+    const fields=['bgName','bgRace','bgClass','bgGender','bgSize','bgHeight','bgFaith','bgAge','bgWeight','bgLanguages','bgBackstory'];
+    for(const id of fields){
+      const val=await get(child(ref(db), SITE_PATH + '/fields/' + id)).then(snap=>snap.exists()?snap.val():'');
+      const el=document.getElementById(id);
+      if(el) el.value=val;
+      if(el) el.addEventListener('input',()=>saveField(id,el.value));
+    }
   }
 }
 
+// Save tab data
 function saveTabData(tab){
   const container=document.getElementById(tab+'Container');
-  const data=Array.from(container.children).map(div=>{
+  const data=Array.from(container.querySelectorAll('.action-section')).map(div=>{
     const inputs=div.querySelectorAll('input');
     return {name:inputs[0].value,range:inputs[1].value,hit:inputs[2].value,type:inputs[3].value,damage:inputs[4].value,notes:inputs[5].value};
   });
-  set(ref(db,SITE_PATH+'/'+tab),data);
+  set(ref(db, SITE_PATH + '/' + tab), data);
 }
-
 function saveInventory(){
   const container=document.getElementById('inventoryContainer');
-  const data=Array.from(container.children).map(div=>{
+  const data=Array.from(container.querySelectorAll('.inventory-grid')).map(div=>{
     const inputs=div.querySelectorAll('input');
     return {quantity:inputs[0].value,name:inputs[1].value,description:inputs[2].value};
   });
-  set(ref(db,SITE_PATH+'/inventory'),data);
+  set(ref(db, SITE_PATH + '/inventory'), data);
 }
 
 // Add buttons
-document.getElementById('addActionBtn').addEventListener('click',()=>{document.getElementById('actionsContainer').appendChild(createActionElement({},()=>saveTabData('actions'))); saveTabData('actions');});
-document.getElementById('addSpellBtn').addEventListener('click',()=>{document.getElementById('spellsContainer').appendChild(createActionElement({},()=>saveTabData('spells'))); saveTabData('spells');});
-document.getElementById('addInventoryBtn').addEventListener('click',()=>{document.getElementById('inventoryContainer').appendChild(createInventoryElement({})); saveInventory();});
+document.getElementById('addActionBtn').addEventListener('click',()=>{document.getElementById('actionsContainer').appendChild(createActionElement({},()=>saveTabData('actions')));});
+document.getElementById('addSpellBtn').addEventListener('click',()=>{document.getElementById('spellsContainer').appendChild(createActionElement({},()=>saveTabData('spells')));});
+document.getElementById('addInventoryBtn').addEventListener('click',()=>{document.getElementById('inventoryContainer').appendChild(createInventoryElement({}));});
 </script>
 
 </body>
